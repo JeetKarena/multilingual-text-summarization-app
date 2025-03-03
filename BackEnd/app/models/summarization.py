@@ -95,8 +95,8 @@ def extract_text_from_txt(file_path: str) -> Dict[str, Any]:
             "metadata": metadata
         }
     except Exception as e:
-        raise Exception(f"Error extracting text from TXT: {str(e)})
-```
+        raise Exception(f"Error extracting text from TXT: {str(e)}")
+
 # BackEnd/app/models/summarization.py
 import asyncio
 import logging

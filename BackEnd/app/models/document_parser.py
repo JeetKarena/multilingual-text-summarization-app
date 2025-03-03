@@ -95,4 +95,5 @@ def extract_text_from_txt(file_path: str) -> Dict[str, Any]:
             "metadata": metadata
         }
     except Exception as e:
+        # Fix the missing quotation mark
         raise Exception(f"Error extracting text from TXT: {str(e)}")
