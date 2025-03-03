@@ -26,4 +26,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-models/*
+models/*.DS_Store
