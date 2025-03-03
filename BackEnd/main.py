@@ -2,10 +2,15 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 from app.api import api_router
 from app.core.config import settings
-from app.db.session import connect_to_mongo, close_mongo_connection
+from app.db.session import connect_to_mongo, close_mongo_connection, ensure_indexes
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -23,7 +28,13 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 async def startup_db_client():
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+        await ensure_indexes()
+        logger.info("Database initialization completed successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {str(e)}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

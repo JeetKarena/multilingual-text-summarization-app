@@ -2,6 +2,67 @@
 version: '3.8'
 
 services:
+  mongo1:
+    image: mongo:latest
+    container_name: mongo1
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data1:/data/db
+    networks:
+      - mongodb_network
+    healthcheck:
+      test: mongosh --eval "try { rs.status() } catch (err) { rs.initiate() }"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo2:
+    image: mongo:latest
+    container_name: mongo2
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data2:/data/db
+    networks:
+      - mongodb_network
+    depends_on:
+      - mongo1
+
+  mongo3:
+    image: mongo:latest
+    container_name: mongo3
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongodb_data3:/data/db
+    networks:
+      - mongodb_network
+    depends_on:
+      - mongo1
+
+  mongo-init:
+    image: mongo:latest
+    networks:
+      - mongodb_network
+    depends_on:
+      mongo1:
+        condition: service_healthy
+    command: >
+      mongosh --host mongo1:27017 --eval '
+        rs.initiate({
+          _id: "rs0",
+          members: [
+            {_id: 0, host: "mongo1:27017"},
+            {_id: 1, host: "mongo2:27017"},
+            {_id: 2, host: "mongo3:27017"}
+          ]
+        });
+      '
+
   backend:
     build: ./BackEnd
     ports:
@@ -10,12 +71,16 @@ services:
       - ./BackEnd:/app
       - ./uploads:/app/uploads
     environment:
-      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_URL=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
       - DATABASE_NAME=summarization_db
       - REDIS_HOST=redis
       - SECRET_KEY=${SECRET_KEY:-yoursecretkeyhere}
+    networks:
+      - mongodb_network
     depends_on:
-      - mongo
+      - mongo1
+      - mongo2
+      - mongo3
       - redis
 
   frontend:
@@ -29,13 +94,6 @@ services:
       - VITE_API_URL=http://localhost:8000/api/v1
     depends_on:
       - backend
-
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
 
   redis:
     image: redis:alpine
@@ -52,6 +110,12 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+networks:
+  mongodb_network:
+    driver: bridge
+
 volumes:
-  mongodb_data:
+  mongodb_data1:
+  mongodb_data2:
+  mongodb_data3:
   elasticsearch_data:
