@@ -1,35 +1,54 @@
 # BackEnd/app/db/base.py
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
 from bson import ObjectId
+from pydantic import BaseModel, ConfigDict, GetJsonSchemaHandler
+from pydantic.json_schema import JsonSchemaValue
+from typing import Annotated, Any, Optional, List, Dict
+from datetime import datetime
 
-class PyObjectId(ObjectId):
+class PyObjectId(str):
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
-        
+
     @classmethod
     def validate(cls, v):
-        if not ObjectId.is_valid(v):
+        if not ObjectId.is_valid(str(v)):
             raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-    
+        return ObjectId(str(v))
+
     @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
+    def __get_pydantic_json_schema__(
+        cls, _schema_cache: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        return {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$",
+            "examples": ["507f1f77bcf86cd799439011"],
+        }
 
 class MongoBaseModel(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str}
+    )
     
-    class Config:
-        json_encoders = {
-            ObjectId: str,
-            datetime: lambda dt: dt.isoformat(),
-        }
-        allow_population_by_field_name = True
+    id: Optional[Annotated[PyObjectId, "The document ID"]] = None
+    created_at: datetime = datetime.utcnow()
+    updated_at: datetime = datetime.utcnow()
+
+    def dict(self, *args, **kwargs):
+        """Convert to dict with _id handling."""
+        kwargs.pop('by_alias', None)
+        kwargs['exclude_unset'] = True
+        
+        dictionary = super().model_dump(*args, **kwargs)
+        
+        # Convert id to _id for MongoDB
+        if dictionary.get("id"):
+            dictionary["_id"] = dictionary.pop("id")
+        
+        return dictionary
 
 class UserModel(MongoBaseModel):
     email: str
