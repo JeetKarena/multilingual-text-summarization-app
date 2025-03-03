@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+    environment:
+      - MONGODB_URL=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+      - DATABASE_NAME=summarization_db
+      - REDIS_HOST=redis
+      - SECRET_KEY=devsecrethereforlocaltesting123
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+      - redis
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  mongo1:
+    image: mongo:latest
+    container_name: mongo1
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data1:/data/db
+    healthcheck:
+      test: mongosh --eval "try { rs.status() } catch (err) { rs.initiate() }"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo2:
+    image: mongo:latest
+    container_name: mongo2
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data2:/data/db
+    depends_on:
+      - mongo1
+
+  mongo3:
+    image: mongo:latest
+    container_name: mongo3
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongodb_data3:/data/db
+    depends_on:
+      - mongo1
+
+  mongo-init:
+    image: mongo:latest
+    depends_on:
+      mongo1:
+        condition: service_healthy
+    command: >
+      mongosh --host mongo1:27017 --eval '
+        rs.initiate({
+          _id: "rs0",
+          members: [
+            {_id: 0, host: "mongo1:27017"},
+            {_id: 1, host: "mongo2:27017"},
+            {_id: 2, host: "mongo3:27017"}
+          ]
+        });
+      '
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mongodb_data1:
+  mongodb_data2:
+  mongodb_data3:
+  redis_data:

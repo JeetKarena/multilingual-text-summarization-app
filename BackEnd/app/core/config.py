@@ -1,6 +1,6 @@
 # BackEnd/app/core/config.py
 import os
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -29,5 +29,8 @@ class Settings(BaseSettings):
     
     # Model settings
     DEFAULT_MODEL: str = "facebook/mbart-large-cc25"
+
+    class Config:
+        env_file = ".env"
 
 settings = Settings()
