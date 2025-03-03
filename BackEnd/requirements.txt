@@ -14,5 +14,5 @@ torch>=2.0.0
 pymupdf>=1.22.3  # For PDF processing
 python-docx>=0.8.11  # For DOCX processing
 redis>=4.5.5
-elasticsearch>=8.8.0
+#elasticsearch>=8.8.0
 ariadne>=0.26.0  # For GraphQL implementation

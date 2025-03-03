@@ -3,10 +3,11 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from datetime import datetime
 
 from app.api import api_router
 from app.core.config import settings
-from app.db.session import connect_to_mongo, close_mongo_connection, ensure_indexes
+from app.db.session import connect_to_mongo, close_mongo_connection, ensure_indexes, Database
 from app.api.graphql.middleware import graphql_app
 
 # Configure logging
@@ -47,6 +48,23 @@ async def shutdown_db_client():
 @app.get("/")
 async def root():
     return {"message": f"Welcome to the {settings.PROJECT_NAME}"}
+
+@app.get("/health")
+async def health_check():
+    try:
+        # Check MongoDB connection
+        await Database.client.admin.command('ismaster')
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
