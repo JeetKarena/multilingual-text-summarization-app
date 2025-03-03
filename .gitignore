@@ -1,0 +1,29 @@
+# BackEnd/.gitignore
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.idea/
+.vscode/
+*.log
+uploads/*
+!uploads/.gitkeep
+alembic/versions/*
+
+# FrontEnd/Text-Summarization-App/.gitignore
+node_modules/
+dist/
+
+# LLM Model/.gitignore
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+models/*
