@@ -7,6 +7,7 @@ import logging
 from app.api import api_router
 from app.core.config import settings
 from app.db.session import connect_to_mongo, close_mongo_connection, ensure_indexes
+from app.api.graphql.middleware import graphql_app
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,8 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API router
+# Include REST API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Mount GraphQL endpoint
+app.mount("/graphql", graphql_app)
 
 @app.on_event("startup")
 async def startup_db_client():
