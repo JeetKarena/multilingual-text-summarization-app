@@ -1,0 +1,57 @@
+# docker-compose.yml (root directory)
+version: '3.8'
+
+services:
+  backend:
+    build: ./BackEnd
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./BackEnd:/app
+      - ./uploads:/app/uploads
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - DATABASE_NAME=summarization_db
+      - REDIS_HOST=redis
+      - SECRET_KEY=${SECRET_KEY:-yoursecretkeyhere}
+    depends_on:
+      - mongo
+      - redis
+
+  frontend:
+    build: ./FrontEnd
+    ports:
+      - "3000:80"
+    volumes:
+      - ./FrontEnd:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+volumes:
+  mongodb_data:
+  elasticsearch_data:
