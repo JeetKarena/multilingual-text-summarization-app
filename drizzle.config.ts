@@ -1,14 +1,17 @@
 import { defineConfig } from "drizzle-kit";
+import * as dotenv from 'dotenv';
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
-}
+// Load environment variables from .env file
+dotenv.config();
+
+// Get the DATABASE_URL from environment variables or use a default value
+const databaseUrl = process.env.DATABASE_URL || "postgresql://textsummarizer:password123@localhost:5432/summarizer_db";
 
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: databaseUrl,
   },
 });

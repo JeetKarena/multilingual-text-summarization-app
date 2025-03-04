@@ -1,6 +1,7 @@
 import { User, InsertUser, Summary, InsertSummary } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { PostgresStorage } from "./pg-storage";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -16,6 +17,7 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
+// Memory Storage Implementation (unchanged, keep for reference)
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private summaries: Map<number, Summary>;
@@ -45,7 +47,10 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
+    const user: User = {
+      ...insertUser, id,
+      createdAt: null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -63,11 +68,11 @@ export class MemStorage implements IStorage {
   async deleteUser(id: number): Promise<boolean> {
     const deleted = this.users.delete(id);
     // Also delete all user's summaries
-    for (const [summaryId, summary] of this.summaries.entries()) {
+    this.summaries.forEach((summary, summaryId) => {
       if (summary.userId === id) {
         this.summaries.delete(summaryId);
       }
-    }
+    });
     return deleted;
   }
 
@@ -86,7 +91,7 @@ export class MemStorage implements IStorage {
   async getUserSummaries(userId: number): Promise<Summary[]> {
     return Array.from(this.summaries.values())
       .filter(summary => summary.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 
   async deleteSummary(id: number, userId: number): Promise<boolean> {
@@ -98,4 +103,15 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Choose the storage implementation based on environment
+let storage: IStorage;
+
+if (process.env.DATABASE_URL) {
+  console.log("Using PostgreSQL storage");
+  storage = new PostgresStorage(process.env.DATABASE_URL);
+} else {
+  console.log("Using in-memory storage");
+  storage = new MemStorage();
+}
+
+export { storage };

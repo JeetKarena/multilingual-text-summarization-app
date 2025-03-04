@@ -10,6 +10,7 @@ import { typeDefs } from './graphql/schema';
 import { resolvers } from './graphql/resolvers';
 import { createContext } from './graphql/context';
 import { setupAuth } from "./auth";
+import { PostgresStorage } from "./pg-storage";
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use(json());
 
 // Session configuration must come before routes
 app.use(session({
-  secret: process.env.SESSION_SECRET!,
+  secret: process.env.SESSION_SECRET || 'dev_secret_should_change_in_production',
   resave: false,
   saveUninitialized: false,
   name: 'sid',
@@ -44,11 +45,21 @@ app.use(session({
 setupAuth(app);
 
 // Debug middleware to log session and auth status
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  console.log('Session ID:', req.sessionID);
-  console.log('Is Authenticated:', req.isAuthenticated?.());
-  next();
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log('Session ID:', req.sessionID);
+    console.log('Is Authenticated:', req.isAuthenticated?.());
+    next();
+  });
+}
+
+// Add this endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Error handling middleware
@@ -58,6 +69,27 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 async function main() {
+  // Initialize PostgreSQL if being used
+  if (storage instanceof PostgresStorage) {
+    try {
+      console.log("Initializing PostgreSQL database...");
+      await (storage as PostgresStorage).initialize();
+      console.log("PostgreSQL database initialized successfully");
+    } catch (err) {
+      console.error("Failed to initialize PostgreSQL:", err);
+      
+      // In development, exit on database error
+      if (process.env.NODE_ENV !== 'production') {
+        process.exit(1);
+      } else {
+        // In production, retry after delay instead of crashing
+        console.log("Will retry database initialization in 5 seconds...");
+        setTimeout(() => main(), 5000);
+        return; // Return to prevent the rest of the app from starting
+      }
+    }
+  }
+  
   // Create Apollo Server
   const server = new ApolloServer({
     typeDefs,
@@ -75,13 +107,16 @@ async function main() {
     }),
   );
 
-  const port = 5000; // Always serve on port 5000 as required
+  const port = process.env.PORT || 5000;
+  
+  // Create HTTP server from Express app
+  const httpServer = require('http').createServer(app);
 
   if (process.env.NODE_ENV !== "production") {
-    await setupVite(app, app);
+    await setupVite(app, httpServer);
   }
 
-  app.listen(port, () => {
+  httpServer.listen(port, () => {
     console.log(`Server running on port ${port}`);
     console.log(`GraphQL endpoint: http://localhost:${port}/graphql`);
   });
