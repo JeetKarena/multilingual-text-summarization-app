@@ -32,7 +32,7 @@ app.use(json());
 
 // Session configuration must come before routes
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev_secret_should_change_in_production',
+  secret: process.env.SESSION_SECRET || 'dev_secret_change_in_production',
   resave: false,
   saveUninitialized: false,
   name: 'sid',
