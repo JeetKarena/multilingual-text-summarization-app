@@ -11,6 +11,10 @@ import { resolvers } from './graphql/resolvers';
 import { createContext } from './graphql/context';
 import { setupAuth } from "./auth";
 import { PostgresStorage } from "./pg-storage";
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+const { Pool } = pg;
 
 const app = express();
 
@@ -73,7 +77,14 @@ async function main() {
   if (storage instanceof PostgresStorage) {
     try {
       console.log("Initializing PostgreSQL database...");
-      await (storage as PostgresStorage).initialize();
+      const connectionString = process.env.DATABASE_URL;
+      if (!connectionString) {
+        console.error('DATABASE_URL environment variable not set');
+        process.exit(1);
+      }
+      const pool = new Pool({ connectionString });
+      const db = drizzle(pool);
+      await migrate(db, { migrationsFolder: './migrations' });
       console.log("PostgreSQL database initialized successfully");
     } catch (err) {
       console.error("Failed to initialize PostgreSQL:", err);

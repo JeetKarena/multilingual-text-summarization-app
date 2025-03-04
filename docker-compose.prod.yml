@@ -5,8 +5,10 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: textsummarizer
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password123}
+      POSTGRES_PASSWORD: password123
       POSTGRES_DB: summarizer_db
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
