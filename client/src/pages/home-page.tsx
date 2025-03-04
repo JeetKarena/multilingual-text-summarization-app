@@ -71,7 +71,7 @@ export default function HomePage() {
 
   const summarizeMutation = useMutation({
     mutationFn: async (data: { originalText: string; language: string }) => {
-      const res = await apiRequest("POST", "/api/summarize", data);
+      const res = await apiRequest("POST", "/summarize", data); // Update endpoint
       if (!res.ok) {
         const error = await res.text();
         throw new Error(error || 'Failed to summarize text');
@@ -79,7 +79,7 @@ export default function HomePage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/summaries"] });
+      queryClient.invalidateQueries({ queryKey: ["/summaries"] }); // Update query key
       toast({
         title: "Success",
         description: "Text has been summarized",
