@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 import { users, summaries } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';
 import { User, InsertUser, Summary, InsertSummary } from "@shared/schema";
@@ -11,7 +12,7 @@ import { IStorage } from './storage';
 const PgStore = pgSessionStore(session);
 
 export class PostgresStorage implements IStorage {
-  private pool: Pool;
+  private pool: any;
   private db: ReturnType<typeof drizzle>;
   sessionStore: session.Store;
 
