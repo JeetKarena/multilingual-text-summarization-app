@@ -53,7 +53,7 @@ if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
     console.log('Session ID:', req.sessionID);
-    console.log('Is Authenticated:', req.isAuthenticated?.());
+    console.log('Is Authenticated?.():', req.isAuthenticated?.());
     next();
   });
 }
